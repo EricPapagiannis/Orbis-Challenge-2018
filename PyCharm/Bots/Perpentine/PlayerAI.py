@@ -1,9 +1,9 @@
 from PythonClientAPI.game.PointUtils import *
 from PythonClientAPI.game.Entities import FriendlyUnit, EnemyUnit, Tile
-from PythonClientAPI.game.Enums import Team
+from PythonClientAPI.game.Enums import Team, Direction
 from PythonClientAPI.game.World import World
 from PythonClientAPI.game.TileUtils import TileUtils
-
+from PythonClientAPI.game.PathFinder import PathFinder
 class PlayerAI:
 
     def __init__(self):
@@ -11,6 +11,8 @@ class PlayerAI:
         self.turn_count = 0             # game turn count
         self.target = None              # target to send unit to!
         self.outbound = True            # is the unit leaving, or returning?
+        self.hitFirstCorner = False
+        self.direction = None
 
     def do_move(self, world, friendly_unit, enemy_units):
         '''
@@ -30,41 +32,69 @@ class PlayerAI:
         :param enemy_units: list of EnemyUnit objects
         '''
 
-        # increment turn count
+        pathfinder = PathFinder(world)
+        corners = [(1, 1), (world.get_width()-2, 1), (1, world.get_height()-2), (world.get_width()-2, world.get_height()-2)]
         self.turn_count += 1
-
-        # if unit is dead, stop making moves.
         if friendly_unit.status == 'DISABLED':
-            print("Turn {0}: Disabled - skipping move.".format(str(self.turn_count)))
-            self.target = None
-            self.outbound = True
-            return
+            self.hitFirstCorner = False
+            self.direction = None
+        if not self.hitFirstCorner:
+            startpoints = []
+            topleft = world.path.get_shortest_path(friendly_unit.position, corners[0], friendly_unit.snake)[0]
+            topright = world.path.get_shortest_path(friendly_unit.position, corners[1], friendly_unit.snake)[0]
+            botleft = world.path.get_shortest_path(friendly_unit.position, corners[2], friendly_unit.snake)[0]
+            botright = world.path.get_shortest_path(friendly_unit.position, corners[3], friendly_unit.snake)[0]
+            startpoints.append(topleft)
+            startpoints.append(topright)
+            startpoints.append(botleft)
+            startpoints.append(botright)
 
-        # if unit reaches the target point, reverse outbound boolean and set target back to None
-        if self.target is not None and friendly_unit.position == self.target.position:
-            self.outbound = not self.outbound
-            self.target = None
+            dist = 9999999
 
-        # if outbound and no target set, set target as the closest capturable tile at least 1 tile away from your territory's edge.
-        if self.outbound and self.target is None:
-            edges = [tile for tile in world.util.get_friendly_territory_edges()]
-            avoid = []
-            for edge in edges:
-                avoid += [pos for pos in world.get_neighbours(edge.position).values()]
-            self.target = world.util.get_closest_capturable_territory_from(friendly_unit.position, avoid)
+            for point in startpoints:
+                newdist = pathfinder.get_taxi_cab_distance(friendly_unit.position, point)
+                if newdist < dist:
+                    dist = newdist
+                    next_move = point
+            if next_move in corners:
+                self.hitFirstCorner = True
+        else:
+            print(world.get_neighbours(friendly_unit.position))
+            if self.direction is None:
+                print("abba baab @@@@@@@@@@")
+                neighbours = world.get_neighbours(friendly_unit.position)
+                print(neighbours)
+                for direction, position in neighbours.items():
+                    if position not in friendly_unit.snake and not world.is_wall(position):
 
-        # else if inbound and no target set, set target as the closest friendly tile
-        elif not self.outbound and self.target is None:
-            self.target = world.util.get_closest_friendly_territory_from(friendly_unit.position, None)
+                        print(direction)
+                        self.direction = direction
 
-        # set next move as the next point in the path to target
-        next_move = world.path.get_shortest_path(friendly_unit.position, self.target.position, friendly_unit.snake)[0]
-        # move!
-        # test
+            print(self.direction)
+            if self.direction == Direction.SOUTH:
+                next_move = world.path.get_shortest_path(friendly_unit.position, (friendly_unit.position[0], 28), [])[0]
+            if self.direction == Direction.NORTH:
+                next_move = world.path.get_shortest_path(friendly_unit.position, (friendly_unit.position[0], 1), [])[0]
+            if self.direction == Direction.EAST:
+                next_move = world.path.get_shortest_path(friendly_unit.position, (28, friendly_unit.position[1]), [])[0]
+            if self.direction == Direction.WEST:
+                next_move = world.path.get_shortest_path(friendly_unit.position, (1, friendly_unit.position[1]), [])[0]
+            if next_move in corners:
+                print("FUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUCK")
+                self.direction = None
+            neighbours = world.get_neighbours(friendly_unit.position)
+            for direction, position in neighbours.items():
+                if world.position_to_tile_map[position].is_friendly:
+                    next_move = position
+                    self.hitFirstCorner = False
+                    self.direction = None
+
         friendly_unit.move(next_move)
+
+
         print("Turn {0}: currently at {1}, making {2} move to {3}.".format(
             str(self.turn_count),
             str(friendly_unit.position),
             'outbound' if self.outbound else 'inbound',
-            str(self.target.position)
+            str(next_move)
         ))
