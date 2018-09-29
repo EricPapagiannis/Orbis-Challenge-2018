@@ -59,8 +59,8 @@ class PlayerAI:
 
         # set next move as the next point in the path to target
         next_move = world.path.get_shortest_path(friendly_unit.position, self.target.position, friendly_unit.snake)[0]
-
         # move!
+        # test
         friendly_unit.move(next_move)
         print("Turn {0}: currently at {1}, making {2} move to {3}.".format(
             str(self.turn_count),
