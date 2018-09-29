@@ -40,38 +40,34 @@ class PlayerAI:
             self.direction = None
         else:
             if self.cornerCount == 0:
-                startpoints = []
-                topleft = world.path.get_shortest_path(friendly_unit.position, corners[0], friendly_unit.snake)[0]
-                topright = world.path.get_shortest_path(friendly_unit.position, corners[1], friendly_unit.snake)[0]
-                botleft = world.path.get_shortest_path(friendly_unit.position, corners[2], friendly_unit.snake)[0]
-                botright = world.path.get_shortest_path(friendly_unit.position, corners[3], friendly_unit.snake)[0]
-                startpoints.append(topleft)
-                startpoints.append(topright)
-                startpoints.append(botleft)
-                startpoints.append(botright)
+                startpath = []
+                topleft = world.path.get_shortest_path(friendly_unit.position, corners[0], friendly_unit.snake)
+                topright = world.path.get_shortest_path(friendly_unit.position, corners[1], friendly_unit.snake)
+                botleft = world.path.get_shortest_path(friendly_unit.position, corners[2], friendly_unit.snake)
+                botright = world.path.get_shortest_path(friendly_unit.position, corners[3], friendly_unit.snake)
+                startpath.append(topleft)
+                startpath.append(topright)
+                startpath.append(botleft)
+                startpath.append(botright)
 
                 dist = 9999999
+                nextPath = None
+                for path in startpath:
+                    pathsize = len(path)
+                    if pathsize < dist:
+                        dist = pathsize
+                        nextPath = path[0]
+                next_move = nextPath
 
-                for point in startpoints:
-                    newdist = pathfinder.get_taxi_cab_distance(friendly_unit.position, point)
-                    if newdist < dist:
-                        dist = newdist
-                        next_move = point
                 if next_move in corners:
                     self.cornerCount += 1
             else:
-                print(world.get_neighbours(friendly_unit.position))
                 if self.direction is None:
-                    print("abba baab @@@@@@@@@@")
                     neighbours = world.get_neighbours(friendly_unit.position)
-                    print(neighbours)
                     for direction, position in neighbours.items():
                         if position not in friendly_unit.snake and not world.is_wall(position):
-
-                            print(direction)
                             self.direction = direction
 
-                print(self.direction)
                 if self.direction == Direction.SOUTH:
                     next_move = world.path.get_shortest_path(friendly_unit.position, (friendly_unit.position[0], 28), [])[0]
                 if self.direction == Direction.NORTH:
@@ -88,7 +84,6 @@ class PlayerAI:
                     world.path.get_shortest_path(friendly_unit.position, tile.position, friendly_unit.snake)[0]
 
                 if next_move in corners:
-                    print("FUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUCK")
                     self.direction = None
                     self.cornerCount += 1
 
