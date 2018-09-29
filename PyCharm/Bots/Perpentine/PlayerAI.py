@@ -11,8 +11,8 @@ class PlayerAI:
         self.turn_count = 0             # game turn count
         self.target = None              # target to send unit to!
         self.outbound = True            # is the unit leaving, or returning?
-        self.hitFirstCorner = False
         self.direction = None
+        self.cornerCount = 0
 
     def do_move(self, world, friendly_unit, enemy_units):
         '''
@@ -36,9 +36,9 @@ class PlayerAI:
         corners = [(1, 1), (world.get_width()-2, 1), (1, world.get_height()-2), (world.get_width()-2, world.get_height()-2)]
         self.turn_count += 1
         if friendly_unit.status == 'DISABLED':
-            self.hitFirstCorner = False
+            self.cornerCount = 0
             self.direction = None
-        if not self.hitFirstCorner:
+        if self.cornerCount == 0:
             startpoints = []
             topleft = world.path.get_shortest_path(friendly_unit.position, corners[0], friendly_unit.snake)[0]
             topright = world.path.get_shortest_path(friendly_unit.position, corners[1], friendly_unit.snake)[0]
@@ -57,7 +57,7 @@ class PlayerAI:
                     dist = newdist
                     next_move = point
             if next_move in corners:
-                self.hitFirstCorner = True
+                self.cornerCount += 1
         else:
             print(world.get_neighbours(friendly_unit.position))
             if self.direction is None:
@@ -79,16 +79,21 @@ class PlayerAI:
                 next_move = world.path.get_shortest_path(friendly_unit.position, (28, friendly_unit.position[1]), [])[0]
             if self.direction == Direction.WEST:
                 next_move = world.path.get_shortest_path(friendly_unit.position, (1, friendly_unit.position[1]), [])[0]
+                neighbours = world.get_neighbours(friendly_unit.position)
+            if self.cornerCount == 4:
+                tileUtils = TileUtils(world, friendly_unit, None)
+                tile = tileUtils.get_closest_friendly_territory_from(friendly_unit.position, friendly_unit.snake)
+                next_move = \
+                world.path.get_shortest_path(friendly_unit.position, tile.position, friendly_unit.snake)[0]
+
             if next_move in corners:
                 print("FUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUCK")
                 self.direction = None
-            neighbours = world.get_neighbours(friendly_unit.position)
-            for direction, position in neighbours.items():
-                if world.position_to_tile_map[position].is_friendly:
-                    next_move = position
-                    self.hitFirstCorner = False
-                    self.direction = None
+                self.cornerCount += 1
 
+        if world.position_to_tile_map[next_move].is_friendly:
+            self.cornerCount = 0
+            self.direction = None
         friendly_unit.move(next_move)
 
 
