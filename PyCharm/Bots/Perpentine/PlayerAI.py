@@ -58,8 +58,18 @@ class PlayerAI:
             self.target = world.util.get_closest_friendly_territory_from(friendly_unit.position, None)
 
         # set next move as the next point in the path to target
-        next_move = world.path.get_shortest_path(friendly_unit.position, self.target.position, friendly_unit.snake)[0]
 
+        distance_to_safety = len(world.path.get_shortest_path(friendly_unit.position, self.target.position, friendly_unit.snake))
+        # distance_from_enemy1 = len(world.path.get_shortest_path(enemy_units[0], world.util.get_closest_friendly_body_from(enemy_units[0], enemy_units[0].snake), enemy_units[0].snake))
+        #Get out of own territory asap
+        if (world.position_to_tile_map[friendly_unit.position].is_friendly):
+            next_move = world.path.get_shortest_path(friendly_unit.position, world.util.get_closest_neutral_territory_from(friendly_unit.position, []).position, friendly_unit.snake)[0]
+        else:
+
+            next_move = world.path.get_shortest_path(friendly_unit.position, self.target.position, friendly_unit.snake)[0]
+            print("Distance to safety: " + str(distance_to_safety))
+            print("Distance from enemy 1: " + str(distance_from_enemy1))
+        # next_move = world.path.get_shortest_path(friendly_unit.position, self.target.position, friendly_unit.snake)[0]
         # move!
         friendly_unit.move(next_move)
         print("Turn {0}: currently at {1}, making {2} move to {3}.".format(
